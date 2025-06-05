@@ -4,6 +4,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("macosx")
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
 
@@ -148,7 +150,6 @@ for p in lags:
     X_test_seq = X_seq[split_lstm:].reshape(-1, p, 1)
     y_test_seq = y_seq[split_lstm:]
 
-    # 3.b) Budowa modelu LSTM
     model = Sequential()
     model.add(LSTM(100, input_shape=(p, 1)))
     model.add(Dense(1))
