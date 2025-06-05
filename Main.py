@@ -5,7 +5,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use("macosx")
+# matplotlib.use("macosx")
 from keras.models import Sequential
 from keras.layers import LSTM, Dense
 
@@ -92,16 +92,14 @@ ar_errors = []
 for p in lags:
     X_ar, y_ar = create_lagged_data(data_seg_scaled, p)
     split_ar = int(0.8 * len(X_ar))
-    X_train_ar, X_test_ar = X_ar[:split_ar], X_ar[split_ar:]
-    y_train_ar, y_test_ar = y_ar[:split_ar], y_ar[split_ar:]
-
+    X_train, X_test, y_train, y_test = train_test_split(X_ar, y_ar, test_size=0.2)
     # Uzupełniamy o kolumnę jedynek (intercept)
-    X_train_aug = np.hstack([np.ones((X_train_ar.shape[0], 1)), X_train_ar])
-    beta = np.linalg.pinv(X_train_aug) @ y_train_ar
-    X_test_aug = np.hstack([np.ones((X_test_ar.shape[0], 1)), X_test_ar])
+    X_train_aug = np.hstack([np.ones((X_train.shape[0], 1)), X_train])
+    beta = np.linalg.pinv(X_train_aug) @ y_train
+    X_test_aug = np.hstack([np.ones((X_test.shape[0], 1)), X_test])
     y_pred_ar = X_test_aug @ beta
 
-    mse_ar = mean_squared_error(y_test_ar, y_pred_ar)
+    mse_ar = mean_squared_error(y_test, y_pred_ar)
     ar_errors.append(mse_ar)
 
 # Wybór najlepszego p dla AR
@@ -145,24 +143,20 @@ for p in lags:
     X_seq, y_seq = create_sequences(data_seg_scaled.reshape(-1, 1), p)
     split_lstm = int(0.8 * len(X_seq))
 
-    X_train_seq = X_seq[:split_lstm].reshape(-1, p, 1)
-    y_train_seq = y_seq[:split_lstm]
-    X_test_seq = X_seq[split_lstm:].reshape(-1, p, 1)
-    y_test_seq = y_seq[split_lstm:]
-
+    X_train, X_test, y_train, y_test = train_test_split(X_seq, y_seq, test_size=0.2)
     model = Sequential()
     model.add(LSTM(100, input_shape=(p, 1)))
     model.add(Dense(1))
     model.compile(loss='mean_squared_error', optimizer='adam')
 
     # 3.c) Trenowanie
-    model.fit(X_train_seq, y_train_seq, epochs=50, batch_size=16, verbose=0)
-
+    model.fit(X_train, y_train, epochs=50, batch_size=16, verbose=0)
+    model.save("LSTM_model.keras")
     # 3.d) Predykcja i obliczenie MSE w skali oryginalnej
-    y_pred_seq = model.predict(X_test_seq)
+    y_pred_seq = model.predict(X_test)
     # Odwracamy MinMaxScaler do skali faktycznej
     y_pred_resc = scaler.inverse_transform(y_pred_seq)
-    y_test_resc = scaler.inverse_transform(y_test_seq.reshape(-1, 1))
+    y_test_resc = scaler.inverse_transform(y_test.reshape(-1, 1))
 
     mse_lstm = mean_squared_error(y_test_resc, y_pred_resc)
     lstm_errors.append(mse_lstm)
